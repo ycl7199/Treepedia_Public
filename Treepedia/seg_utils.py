@@ -37,7 +37,7 @@ def run_segmentation(img, model, label_num = 150):
 
 model_name = 'deeplab_resnest269_ade' # pretrain model name
 label_file_name ='ade20k_class_label.txt' # label txt file name
-img_name = 'C_N010_1_gc1.6_Hsu_2016.jpg'
+img_name = 'test.jpg'
 img =  image.imread(img_name)
 model, label_name = load_model(model_name, label_file_name)
 label_output = run_segmentation(img, model)
