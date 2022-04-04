@@ -207,8 +207,6 @@ def get_api_url(panoID, heading, pitch, key):
 
 def get_api_image(url):
     import urllib
-    # response = requests.get(url, stream=True)
-    # im = np.array(Image.open(response.raw))
     imgFd = urllib.request.urlopen(url)
     im = np.array(Image.open(imgFd))
     return im
