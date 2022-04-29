@@ -132,7 +132,7 @@ def GSVpanoMetadataCollector(samplesFeatureClass, ouputTextFolder, batchNum, gre
                     InfoToSVD_360.write(panoID_list_SVD360)
                     
         panoInfoText.close()
-
+        InfoToSVD_360.close()
 
 def getPanoItems(panoInfo):
     # get the meta data of the panorama
