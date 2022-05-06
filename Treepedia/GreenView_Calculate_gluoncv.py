@@ -20,6 +20,8 @@ from PIL import Image
 import numpy as np
 import requests
 import sys
+import traceback
+import test
 from urllib.parse import urlencode
 
 import csv
@@ -47,6 +49,7 @@ def load_model(model_name, label_file_name, ):
 
 def run_segmentation(img, model, label_num = 150):
     # ctx = mx.gpu(0) # device setting
+    img = image.imread(img)
     ctx = mx.cpu(0) # using cpu
     img = test_transform(img, ctx) # change image(array) to tensor
     model_output = model.predict(img)
@@ -58,7 +61,7 @@ def run_segmentation(img, model, label_num = 150):
     for i in range(label_num):
         label_percentage = round( (np.count_nonzero(predict == i))/pixel_num, 3)
         label_output[i] = label_percentage
-    
+    print('lebel output = ', label_output)
     return label_output
 
 
@@ -97,17 +100,17 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     
     # set a series of heading angle
     headingArr = 360/6*np.array([0,1,2,3,4,5])
-    
+    # headingArr = ['U','D','F','B','L','R']
     # number of GSV images for Green View calculation, in my original Green View View paper, I used 18 images, in this case, 6 images at different horizontal directions should be good.
     numGSVImg = len(headingArr)*1.0
     pitch = 0
     
     # load model from URL
     model_name = 'deeplab_resnest269_ade' # pretrain model name
-    label_file_name ='D:\\flickr_data_transfer_test\\Treepedia_Public-master_36\\Treepedia\\ade20k_class_label.txt' # label txt file name
+    label_file_name ='D:\\Treepedia\\Treepedia_Public-master_36\\Treepedia\\ade20k_class_label.txt' # label txt file name
     model, labels = load_model(model_name, label_file_name)
     print('model load success')
-    csv_output = open('test.csv', 'a+')
+    csv_output = open('test.csv', 'a+', newline= '',encoding='utf-8-sig')
     csv_writer = csv.writer(csv_output)
     attributes = ['panoID', 'panoDate', 'longitude', 'latitude']
     attributes = attributes + labels
@@ -165,7 +168,8 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                         
                         # classify the GSV images and calcuate the GVI
                         try:
-                            im = get_api_image(URL)
+                            # im = get_api_image(URL, panoID, heading) # get image from gcp server
+                            im = get_local_image(panoID, 'svd360') # get image from local
                             label_percent= run_segmentation(im, model)
                             data2csv = [panoID, panoDate, lon, lat] + list(label_percent)
                             greenPercent += label_percent[4]
@@ -174,8 +178,17 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
 
 
                         # if the GSV images are not download successfully or failed to run, then return a null value
-                        except:
-                            print("Unexpected error:", sys.exc_info())
+                        except Exception as e:
+                            #    print(e)
+                            error_class = e.__class__.__name__ #取得錯誤類型
+                            detail = e.args[0] #取得詳細內容
+                            cl, exc, tb = sys.exc_info() #取得Call Stack
+                            lastCallStack = traceback.extract_tb(tb)[-1] #取得Call Stack的最後一筆資料
+                            fileName = lastCallStack[0] #取得發生的檔案名稱
+                            lineNum = lastCallStack[1] #取得發生的行號
+                            funcName = lastCallStack[2] #取得發生的函數名稱
+                            errMsg = "File \"{}\", line {}, in {}: [{}] {}".format(fileName, lineNum, funcName, error_class, detail)
+                            print(errMsg)
                             greenPercent = -1000
                             break
 
@@ -205,11 +218,26 @@ def get_api_url(panoID, heading, pitch, key):
     return URL
 
 
-def get_api_image(url):
+def get_local_image(pano_id, folder_path, heading):
+    img_name = pano_id + '.jpg'
+    img_path = os.path.join(folder_path, img_name)
+    print(img_name,'load succeed')
+    return img_path
+
+
+def get_api_image(url, pano_id, heading):
     import urllib
+    # response = requests.get(url, stream=True)
+    # im = np.array(Image.open(response.raw))
+    # print('url =', url)
     imgFd = urllib.request.urlopen(url)
-    im = np.array(Image.open(imgFd))
-    return im
+    print(type(imgFd))
+    print(imgFd)
+    # im = np.array(Image.open(imgFd))
+    im = Image.open(imgFd)
+    img_path = 'GSV_image\\' + str(pano_id) + str(heading) + '.jpg'
+    im.save(img_path)
+    return img_path
 
 
 def get_pano_lists_from_file(txtfilename, greenmonth):
@@ -255,7 +283,7 @@ if __name__ == "__main__":
     
     import os,os.path
     
-    os.chdir("shp_test")
+    os.chdir("shp_TW")
     root = os.getcwd()
     GSVinfoRoot = os.path.join(root, "metadata")
     outputTextPath = os.path.join(root, "greenViewRes")
