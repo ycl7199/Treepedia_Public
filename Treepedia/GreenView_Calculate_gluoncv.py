@@ -99,7 +99,8 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     print ('The key list is:=============', keylist)
     
     # set a series of heading angle
-    headingArr = 360/6*np.array([0,1,2,3,4,5])
+    # headingArr = 360/6*np.array([0,1,2,3,4,5])
+    headingArr = [0,1,2,3]
     # headingArr = ['U','D','F','B','L','R']
     # number of GSV images for Green View calculation, in my original Green View View paper, I used 18 images, in this case, 6 images at different horizontal directions should be good.
     numGSVImg = len(headingArr)*1.0
@@ -169,10 +170,10 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                         # classify the GSV images and calcuate the GVI
                         try:
                             # im = get_api_image(URL, panoID, heading) # get image from gcp server
-                            im = get_local_image(panoID, 'svd360') # get image from local
+                            im = get_local_image(panoID, 'svd360', heading) # get image from local
                             label_percent= run_segmentation(im, model)
                             data2csv = [panoID, panoDate, lon, lat] + list(label_percent)
-                            greenPercent += label_percent[4]
+                            greenPercent += label_percent[4] # greenView label
                             csv_writer.writerow(data2csv)
                             # greenPercent = greenPercent + percent
 
@@ -194,7 +195,8 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
 
                     # calculate the green view index by averaging six percents from six images
                     # greenViewVal = greenPercent/numGSVImg
-                    greenViewVal = greenPercent/6
+                    # greenViewVal = greenPercent/6 # ori
+                    greenViewVal = greenPercent/4
                     print('The greenview(Tree): %s, pano: %s, (%s, %s)'%(greenViewVal, panoID, lat, lon))
 
                     # write the result and the pano info to the result txt file
@@ -218,8 +220,11 @@ def get_api_url(panoID, heading, pitch, key):
     return URL
 
 
-def get_local_image(pano_id, folder_path, heading):
+def get_local_image(pano_id, folder_path, heading = None, with_heading = False):
     img_name = pano_id + '.jpg'
+    if with_heading:
+        dir_list = ['F','R','B','L']
+        img_name = pano_id +'_'+ dir_list[heading] + '.jpg'
     img_path = os.path.join(folder_path, img_name)
     print(img_name,'load succeed')
     return img_path
